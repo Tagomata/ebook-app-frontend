@@ -80,7 +80,7 @@ jobs:
                   content-filepath: ./lychee/out.md
                   labbels: bug, documentation
 
-     lint-code:
+    lint-code:
           name: Lint Code Quality
           runs-on: ubuntu-latest
           strategy:
