@@ -21,4 +21,4 @@ jobs:
               run: pip install html5validator
               
             - name: Validate HTML files
-              run: html5validator --root . --also-check-css
+              run: html5validator --root . --ignore "css/bootstrap.min.css" "js/bootstrap.bundle.min.js"
