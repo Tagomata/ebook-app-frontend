@@ -80,23 +80,21 @@ jobs:
                   content-filepath: ./lychee/out.md
                   labbels: bug, documentation
 
-    lint-code:
+     lint-code:
           name: Lint Code Quality
           runs-on: ubuntu-latest
           strategy:
               matrix:
                   include:
-                      - tool: "CSS"
-                        command: "stylelint"
-                        pattern: "css/templatemo-*.css"
-                        config:
-                          '{"extends":"stylelint-config-standard","rules":{"no-descending-specificity":null,"selector-class-pattern":null,"color-function-notation":null}}'
-                        config-file: ".stylelintrc.json"
+                      # Comentamos CSS linting porque todo es de terceros
+                      # - tool: "CSS"
+                      #   command: "stylelint"
+                      #   pattern: "css/templatemo-*.css"
+
                       - tool: "JavaScript"
                         command: "eslint"
                         pattern: "js/custom.js js/click-scroll.js"
-                        config: '{"env":{"browser":true,"es2021":true,"jquery":true},"extends":"eslint:recommended","parserOptions":{"ecmaVersion":2021,"sourceType
-                          ":"script"},"rules":{"no-unused-vars":"warn"}}'
+                        config: '{"env":{"browser":true,"es2021":true,"jquery":true},"extends":"eslint:recommended","parserOptions":{"ecmaVersion":2021,"sourceType":"script"},"rules":{"no-unused-vars":"warn"}}'
                         config-file: ".eslintrc.json"
           steps:
               - name: Checkout code
@@ -116,12 +114,7 @@ jobs:
                     }' > package.json
 
               - name: Install ${{ matrix.tool }} linter
-                run: |
-                    if [ "${{ matrix.command }}" = "stylelint" ]; then
-                        npm install --save-dev stylelint@15 stylelint-config-standard@34
-                    else
-                        npm install --save-dev eslint@8
-                    fi
+                run: npm install --save-dev eslint@8
 
               - name: Create ${{ matrix.config-file }}
                 run: echo '${{ matrix.config }}' > ${{ matrix.config-file }}
@@ -134,8 +127,6 @@ jobs:
                 if: always()
                 run: |
                     echo "## 🔍 ${{ matrix.tool }} Linting Results" >> $GITHUB_STEP_SUMMARY
-                    if [ $? -eq 0 ]; then
-                        echo "✅ No issues found" >> $GITHUB_STEP_SUMMARY
-                    else
-                        echo "❌ Issues detected - check logs above" >> $GITHUB_STEP_SUMMARY
-                    fi
+                    echo "✅ Linting completed" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Note:** Only custom code is linted. Third-party libraries (Bootstrap, TemplateMo) are excluded." >> $GITHUB_STEP_SUMMARY
