@@ -79,3 +79,61 @@ jobs:
                   title: 'Broken links detected'
                   content-filepath: ./lychee/out.md
                   labbels: bug, documentation
+
+    lint-code:
+        name: Lint Code Quality
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                include:
+                    - tool: "CSS"
+                      command: "stylelint"
+                      pattern: "**/*.css"
+                    - tool: "JavaScript"
+                      command: "eslint"
+                      pattern: "**/*.js"
+            
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+              
+            - name: Create package.json if it doesn't exist
+              run: |
+                  if [ ! -f package.json ]; then
+                      echo '{"name":"ebook-landing","version":"1.0.0"}' > package.json
+                  fi
+              
+            - name: Install ${{ matrix.tool }} linter
+              run : |
+                  if [ "${{ matrix.command }}" = "stylelint" ]; then
+                      npm install --save-dev stylelint stylelint-config-standard
+                  else
+                      npm install --save-dev eslint
+                  fi
+            
+            - name: Create config for ${{ matrix.tool }}
+              run: |
+                  if [ "${{ matrix.command }}" = "stylelint" ]; then
+                        echo '{"extends":"stylelint-config-standard","rules":{"no-descending-specificity":null,"selector-class-pattern":null}}' > .stylelintrc.json
+                  else
+                        echo '{"env":{"browser":true,"es2021":true},"extends":"eslint:recommended","parserOptions":{"ecmaVersion":"latest"}}' > .eslintrc.json
+                  fi
+
+            - name: Run ${{ matrix.tool }} Linter
+              run: npx ${{ matrix.command }} "${{ matrix.pattern }}"
+              continue-on-error: false
+
+            - name: Upload lint results
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ matrix.tool }}-lint-results
+                  path: |
+                      *.log
+                      ./*.json
