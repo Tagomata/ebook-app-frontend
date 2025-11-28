@@ -507,7 +507,7 @@ This project demonstrates understanding of:
 
 - 🏗️ **Infrastructure Repo**: [github.com/Tagomata/ebook-app](https://github.com/Tagomata/ebook-app)
 - 📄 **Original Template**: [github.com/pravinmishraaws/Ebook](https://github.com/pravinmishraaws/Ebook.git)
-- 🌐 **Live Site**: [Add your CloudFront URL here]
+
 
 ---
 
