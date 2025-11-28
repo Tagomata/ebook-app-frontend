@@ -418,33 +418,6 @@ permissions:
 6. **Generate deployment summary**
    - Shows commit SHA, user, bucket, region
 
----
-
-## 📈 What are Status Badges?
-
-The badges at the top of this README show real-time pipeline status:
-
-[![PR Validation](https://github.com/Tagomata/ebook-app-frontend/actions/workflows/pr-validation.yml/badge.svg)](https://github.com/Tagomata/ebook-app-frontend/actions/workflows/pr-validation.yml)
-[![Deploy to S3](https://github.com/Tagomata/ebook-app-frontend/actions/workflows/deploy-to-s3.yml/badge.svg)](https://github.com/Tagomata/ebook-app-frontend/actions/workflows/deploy-to-s3.yml)
-
-### How Badges Work
-
-**Format**:
-```markdown
-![Badge Name](https://github.com/{user}/{repo}/actions/workflows/{workflow-file}/badge.svg)
-```
-
-**Colors**:
-- 🟢 **Green (passing)**: All checks passed
-- 🔴 **Red (failing)**: Something failed
-- 🟡 **Yellow (running)**: Pipeline in progress
-- ⚪ **Gray (no runs)**: Workflow hasn't run yet
-
-**Benefits**:
-- ✅ Instant visual status
-- ✅ Builds trust (shows active CI/CD)
-- ✅ Professional appearance
-- ✅ Clickable (links to workflow runs)
 
 ---
 
@@ -498,41 +471,6 @@ This is a learning/portfolio project, but contributions are welcome!
 
 ---
 
-## ❓ FAQ: Can I Approve My Own PRs?
-
-**Yes**, as the repository owner, you CAN approve your own PRs by default in GitHub.
-
-**However**, this is configurable in Branch Protection Rules:
-
-### Current Setup (Default):
-```
-✅ Require pull request reviews: 1 approval
-❌ Dismiss stale reviews: Disabled
-❌ Require review from Code Owners: Disabled
-```
-
-**This means**: You can create a PR and approve it yourself.
-
-### To Prevent Self-Approval (Optional):
-
-Go to `Settings → Branches → Edit rule` and enable:
-
-```
-✅ Require pull request reviews before merging
-   ✅ Require approvals: 1
-   ✅ Require review from Code Owners  ← Add CODEOWNERS file
-```
-
-Then create `.github/CODEOWNERS`:
-```
-* @other-user-name
-```
-
-**Result**: Now someone else MUST review your PRs.
-
-**For solo projects**: Self-approval is fine and common practice.
-
----
 
 ## 📝 Credits & Attribution
 
