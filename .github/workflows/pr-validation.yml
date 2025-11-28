@@ -1,0 +1,132 @@
+name: PR Validation
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+    validate-html:
+        name: Validate HTML
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: '3.x'
+
+            - name: Install html5validator
+              run: pip install html5validator
+              
+            - name: Validate HTML files
+              run: html5validator --root . --ignore "css/bootstrap.min.css" "js/bootstrap.bundle.min.js"
+    
+    security-analysis:
+        name: Security Scanning
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+
+            - name: Run Gitleaks
+              uses: gitleaks/gitleaks-action@v2
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            
+            - name: Run Trivy vulnerability scanner
+              uses: aquasecurity/trivy-action@master
+              with:
+                scan-type: 'fs'
+                scan-ref: '.'
+                format: 'sarif'
+                output: 'trivy-results.sarif'
+
+            - name: Upload Trivy scan results to GitHub Security tab
+              uses: github/codeql-action/upload-sarif@v3
+              if: always()
+              with:
+                sarif_file: 'trivy-results.sarif'           
+    check-links:
+        name: Check Broken Links
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Restore lychee cache
+              uses: actions/cache@v4
+              with:
+                  path: .lycheecache
+                  key: cache-lychee-${{ github.sha }}
+                  restore-keys: cache-lychee-
+
+            - name: Link Checker
+              uses: lycheeverse/lychee-action@v2
+              with:
+                  args: --verbose --no-progress --accept 200,201,202,203,204,999 './**/*.html'
+                  fail: true
+              env:
+                  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+            - name: Create Issue From File
+              if: failure()
+              uses: peter-evans/create-issue-from-file@v5
+              with:
+                  title: 'Broken links detected'
+                  content-filepath: ./lychee/out.md
+                  labbels: bug, documentation
+
+    lint-code:
+          name: Lint Code Quality
+          runs-on: ubuntu-latest
+          strategy:
+              matrix:
+                  include:
+                      # Comentamos CSS linting porque todo es de terceros
+                      # - tool: "CSS"
+                      #   command: "stylelint"
+                      #   pattern: "css/templatemo-*.css"
+
+                      - tool: "JavaScript"
+                        command: "eslint"
+                        pattern: "js/custom.js js/click-scroll.js"
+                        config: '{"env":{"browser":true,"es2021":true,"jquery":true},"extends":"eslint:recommended","parserOptions":{"ecmaVersion":2021,"sourceType":"script"},"rules":{"no-unused-vars":"warn"}}'
+                        config-file: ".eslintrc.json"
+          steps:
+              - name: Checkout code
+                uses: actions/checkout@v4
+
+              - name: Setup Node.js
+                uses: actions/setup-node@v4
+                with:
+                    node-version: '20'
+
+              - name: Create package.json
+                run: |
+                    echo '{
+                        "name": "ebook-landing",
+                        "version": "1.0.0",
+                        "private": true
+                    }' > package.json
+
+              - name: Install ${{ matrix.tool }} linter
+                run: npm install --save-dev eslint@8
+
+              - name: Create ${{ matrix.config-file }}
+                run: echo '${{ matrix.config }}' > ${{ matrix.config-file }}
+
+              - name: Run ${{ matrix.tool }} Linter
+                run: npx ${{ matrix.command }} ${{ matrix.pattern }}
+                continue-on-error: false
+
+              - name: Generate summary
+                if: always()
+                run: |
+                    echo "## 🔍 ${{ matrix.tool }} Linting Results" >> $GITHUB_STEP_SUMMARY
+                    echo "✅ Linting completed" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Note:** Only custom code is linted. Third-party libraries (Bootstrap, TemplateMo) are excluded." >> $GITHUB_STEP_SUMMARY
