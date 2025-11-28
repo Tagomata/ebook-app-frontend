@@ -1,0 +1,91 @@
+name: Deploy to S3
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    id-token: write
+    contents: read
+
+jobs:
+    deploy:
+        name: Deploy to AWS S3 + CloudFront
+        runs-on: ubuntu-latest
+
+        env:
+            AWS_REGION: ${{ vars.AWS_REGION }}
+            S3_BUCKET: ${{ vars.S3_BUCKET_NAME }}
+            CF_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+                  aws-region: ${{ env.AWS_REGION }}
+                  role-session-name: GitHubActions-Deploy-${{ github.run_id }}
+
+            - name: Sync files to S3
+              run: |
+                    aws s3 sync . s3://${{ env.S3_BUCKET }}/ \
+                        --exclude ".git/*" \
+                        --exclude ".github/*" \
+                        --exclude "*.md" \
+                        --exclude "PIPELINE-PROGRESS.md" \
+                        --delete \
+                        --cache-control "public, max-age=3600"
+
+            - name: Set optimized cache headers
+              run: |
+                    aws s3 cp s3://${{ env.S3_BUCKET }}/ s3://${{ env.S3_BUCKET }}/ \
+                        --recursive --exclude "*" --include "*.html" \
+                        --metadata-directive REPLACE \
+                        --cache-control "public, max-age=3600, must-revalidate" \
+                        --content-type "text/html; charset=utf-8"
+
+                    aws s3 cp s3://${{ env.S3_BUCKET }}/ s3://${{ env.S3_BUCKET }}/ \
+                        --recursive --exclude "*" --include "*.css" \
+                        --metadata-directive REPLACE \
+                        --cache-control "public, max-age=604800, immutable" \
+                        --content-type "text/css; charset=utf-8"
+
+                    aws s3 cp s3://${{ env.S3_BUCKET }}/ s3://${{ env.S3_BUCKET }}/ \
+                        --recursive --exclude "*" --include "*.js" \
+                        --metadata-directive REPLACE \
+                        --cache-control "public, max-age=604800, immutable" \
+                        --content-type "application/javascript; charset=utf-8"
+
+                    aws s3 cp s3://${{ env.S3_BUCKET }}/ s3://${{ env.S3_BUCKET }}/ \
+                        --recursive --exclude "*" --include "*.jpg" --include "*.png" --include "*.gif" \
+                        --metadata-directive REPLACE \
+                        --cache-control "public, max-age=2592000, immutable"
+
+                    aws s3 cp s3://${{ env.S3_BUCKET }}/ s3://${{ env.S3_BUCKET }}/ \
+                        --recursive --exclude "*" --include "*.woff*" \
+                        --metadata-directive REPLACE \
+                        --cache-control "public, max-age=31536000, immutable"
+
+            - name: Invalidate CloudFront cache
+              run: |
+                    aws cloudfront create-invalidation \
+                        --distribution-id ${{ env.CF_DISTRIBUTION_ID }} \
+                        --paths "/*"
+
+            - name: Generate deployment summary
+              if: always()
+              run: |
+                    echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Status:** ✅ Completed" >> $GITHUB_STEP_SUMMARY
+                    echo "**Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+                    echo "**S3 Bucket:** \`${{ env.S3_BUCKET }}\`" >> $GITHUB_STEP_SUMMARY
+                    echo "**CloudFront:** \`${{ env.CF_DISTRIBUTION_ID }}\`" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                    echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
